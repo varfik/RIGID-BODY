@@ -5,6 +5,7 @@
 
 # To change the body (sphere or cube) press 's' or 'S'
 
-#  run
+
 ./compile.sh
+
 ./rigid_body_sim
