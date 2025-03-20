@@ -11,6 +11,7 @@
 #define HEIGHT 600
 
 #define TIME_SCALE 1000
+
 // Global variables
 bool isSphere = false;
 double OldTime = -1, DeltaTime;
@@ -132,6 +133,8 @@ void Display()
     // solver step
     // double l = SolveEuler(rb, context, DeltaTime, OldTime);
     double l = SolveRungeKutta(rb, context, DeltaTime, OldTime);
+    // double l = SolveHeuns(rb, context, DeltaTime, OldTime);
+    //double l = SolveMidPoint(rb, context, DeltaTime, OldTime);
     //std::cout << "invariant: " << std::fixed << std::setprecision(15) << l << "\n";
 
     // create matrix in opengl stack
