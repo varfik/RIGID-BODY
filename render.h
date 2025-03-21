@@ -11,5 +11,6 @@ extern RigidBody rb;
 extern bool isSphere;
 
 void Run(int argc, char *argv[]);
+void GraphEnergy();
 
 #endif //__RENDER_H

@@ -88,6 +88,32 @@ RigidBody SumRB(const RigidBody &r1, const RigidBody &r2)
     return res;
 }
 
+double GetTotalEnergy(RigidBody &rb, const Context &context, double h, double cur_time)
+{
+    // example of invariant: full energy = kinetic_rotational + kinetic_translational + potential_gravity + potential_buoyancy
+    // E = omega * L + m * v^2 / 2 + potential(force1) + potential(force2)
+    dmat3 R = dmat3(glm::normalize(rb.q));
+    dvec3 omega = R * context.I_inv * glm::transpose(R) * rb.L;
+    double kinetic_rotational = 0.5 * glm::dot(omega, rb.L);
+    double kinetic_translational = 0.5 * (1.0 / context.M_inv) * glm::dot(rb.l, rb.l);
+    double potential_gravity = (1.0 / context.M_inv) * G * rb.r.y;
+
+    double displaced_fluid;
+    if (isSphere) {
+        double height = std::max(0.0, -rb.r.y + SIZE); // height of the submerged part of the body
+        height = std::min(SIZE * 1.0, height);
+        displaced_fluid = M_PI * height * height * (3 * SIZE - height) / 3.0; // amount of displaced fluid
+    } else {
+        double height = std::max(0.0, -rb.r.y + SIZE);
+        displaced_fluid = pow(SIZE, 2) * std::min(height, SIZE * 1.0);
+    }
+    double potential_buoyancy = G * FLUID_DENSITY * displaced_fluid * rb.r.y;
+
+    double total_energy = kinetic_rotational + kinetic_translational + potential_gravity + potential_buoyancy;
+    std::cout << "Total Energy: " << total_energy << std::endl;
+    return total_energy;
+}
+
 // Runge-Kutta4
 // X(t + h) = X(t) + h / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
 // k1 = f(X(t), t)
@@ -107,7 +133,7 @@ double SolveRungeKutta(RigidBody &rb, const Context &context, double h, double c
     dmat3 R = dmat3(glm::normalize(rb.q));
     dvec3 omega = R * context.I_inv * glm::transpose(R) * rb.L;
 
-    return glm::dot(omega, rb.L);
+    return GetTotalEnergy(rb, context, h, cur_time);
 }
 
 // Heun's method
@@ -125,7 +151,7 @@ double SolveHeuns(RigidBody &rb, const Context &context, double h, double cur_ti
     dmat3 R = dmat3(glm::normalize(rb.q));
     dvec3 omega = R * context.I_inv * glm::transpose(R) * rb.L;
 
-    return glm::dot(omega, rb.L);
+    return GetTotalEnergy(rb, context, h, cur_time);
 }
 
 // MidPoint method
@@ -143,7 +169,7 @@ double SolveMidPoint(RigidBody &rb, const Context &context, double h, double cur
     dmat3 R = dmat3(glm::normalize(rb.q));
     dvec3 omega = R * context.I_inv * glm::transpose(R) * rb.L;
 
-    return glm::dot(omega, rb.L);
+    return GetTotalEnergy(rb, context, h, cur_time);
 }
 
 // Euler's method
@@ -156,6 +182,6 @@ double SolveEuler(RigidBody &rb, const Context &context, double h, double cur_ti
     dmat3 R = dmat3(glm::normalize(rb.q));
     dvec3 omega = R * context.I_inv * glm::transpose(R) * rb.L;
 
-    return glm::dot(omega, rb.L);
+    return GetTotalEnergy(rb, context, h, cur_time);
 }
     

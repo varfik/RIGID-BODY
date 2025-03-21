@@ -4,6 +4,7 @@
 #include <iomanip>
 #include <iostream>
 #include <vector>
+#include <fstream>
 
 #include "render.h"
 
@@ -11,6 +12,9 @@
 #define HEIGHT 600
 
 #define TIME_SCALE 1000
+#define TIME_STEP 0.1
+#define GRAPHS_TIME 8.0
+
 
 // Global variables
 bool isSphere = false;
@@ -131,7 +135,7 @@ void Display()
     DrawBackground();
 
     // solver step
-    // double l = SolveEuler(rb, context, DeltaTime, OldTime);
+    //double l = SolveEuler(rb, context, DeltaTime, OldTime);
     double l = SolveRungeKutta(rb, context, DeltaTime, OldTime);
     // double l = SolveHeuns(rb, context, DeltaTime, OldTime);
     //double l = SolveMidPoint(rb, context, DeltaTime, OldTime);
@@ -192,6 +196,72 @@ void Keyboard(unsigned char Key, int MouseX, int MouseY)
         isSphere = !isSphere;
 }
 
+// Функция для сохранения данных в файл
+void saveData(const std::string& filename, const std::vector<double>& times, const std::vector<double>& energies) {
+    std::ofstream dataFile(filename);
+    if (!dataFile) {
+        std::cerr << "Ошибка при открытии файла " << filename << "!\n";
+        return;
+    }
+    for (size_t i = 0; i < times.size(); ++i) {
+        dataFile << times[i] << " " << energies[i] << std::endl;
+    }
+    dataFile.close();
+}
+
+void plotGraphs() {
+    std::ofstream gp("plot_commands.gp");
+    gp << "set terminal png size 800,600\n";
+    gp << "set output 'energy_comparison.png'\n";
+    gp << "set title 'Comparison of Numerical Methods'\n";
+    gp << "set xlabel 'Time (s)'\n";
+    gp << "set ylabel 'Total Energy'\n";
+    gp << "set grid\n";
+    
+    gp << "plot 'rk_energy.txt' using 1:2 with lines title 'Runge-Kutta' lw 2 lc rgb 'blue', "
+          "'midpoint_energy.txt' using 1:2 with lines title 'Midpoint' lw 2 lc rgb 'green', "
+          "'heuns_energy.txt' using 1:2 with lines title 'Heuns' lw 2 lc rgb 'orange', "
+          "'euler_energy.txt' using 1:2 with lines title 'Euler' lw 2 lc rgb 'red'\n";
+    gp.close();
+
+    system("gnuplot plot_commands.gp");
+    std::cout << "График сохранен в energy_comparison.png\n";
+}
+
+// Saving total energy and writing to the file
+void GraphEnergy()
+{
+    RigidBody rb_rk, rb_midpoint, rb_euler, rb_heuns;
+    context.M_inv = 1.0 / 6000000;
+    context.I_inv = dmat3(0);
+
+    rb_rk.r = rb_midpoint.r = rb_euler.r = rb_heuns.r = dvec3(0, 1.5 * SIZE, -200);
+    rb_rk.q = rb_midpoint.q = rb_euler.q = rb_heuns.q = dquat(1, 0, 0, 0);
+    rb_rk.l = rb_midpoint.l = rb_euler.l = rb_heuns.l = dvec3(0, 0, 0);
+    rb_rk.L = rb_midpoint.L = rb_euler.L = rb_heuns.L = dvec3(5000, 5000, 0);
+
+    std::vector<double> times, rk_total_e, midpoint_total_e, euler_total_e, heuns_total_e;
+    for (double t = 0; t <= GRAPHS_TIME; t += TIME_STEP) {
+        times.push_back(t);
+        double rk_energy = SolveRungeKutta(rb_rk, context, TIME_STEP, t);
+        double midpoint_energy = SolveMidPoint(rb_midpoint, context, TIME_STEP, t);
+        double euler_energy = SolveEuler(rb_euler, context, TIME_STEP, t);
+        double heuns_energy = SolveHeuns(rb_heuns, context, TIME_STEP, t);
+
+        rk_total_e.push_back(rk_energy);
+        midpoint_total_e.push_back(midpoint_energy);
+        euler_total_e.push_back(euler_energy);
+        heuns_total_e.push_back(heuns_energy);
+    }
+
+    saveData("rk_energy.txt", times, rk_total_e);
+    saveData("midpoint_energy.txt", times, midpoint_total_e);
+    saveData("euler_energy.txt", times, euler_total_e);
+    saveData("heuns_energy.txt", times, heuns_total_e);
+
+    plotGraphs();
+}
+
 // Start all calculations and drawing
 void Run(int argc, char *argv[])
 {
@@ -242,4 +312,3 @@ void Run(int argc, char *argv[])
     // Start infinite loop
     glutMainLoop();
 }
-
