@@ -34,19 +34,20 @@ RigidBody f_rigidbody(const RigidBody &rb, const Context &context, double time)
     if (is_in_water) {
         if (isSphere) {
             height = std::max(0.0, -rb.r.y + SIZE); // height of the submerged part of the body
-            height = std::min(SIZE * 1.0, height);
+            height = std::min(SIZE * 2.0, height);
             displaced_fluid = M_PI * height * height * (3 * SIZE - height) / 3.0; // amount of displaced fluid
         } else {
-            double height = std::max(0.0, -rb.r.y + SIZE);
-            displaced_fluid = pow(SIZE, 2) * std::min(height, SIZE * 1.0);
+            height = std::max(0.0, -rb.r.y + SIZE);
+            height = std::min(SIZE * 2.0, height);
+            displaced_fluid = pow(2*SIZE, 2) * std::min(height, SIZE * 2.0);
         }
         // buoyancy computing
         buoyancy = dvec3(0.0, FLUID_DENSITY * G * displaced_fluid, 0.0);
         // drag computing
-        drag = -50.0 * dt.r * glm::length(dt.r);
+        //drag = -50.0 * dt.r * glm::length(dt.r);
     }
     else {
-        drag = -10.0 * dt.r * glm::length(dt.r);
+        //drag = -10.0 * dt.r * glm::length(dt.r);
     }
     // total Force
     dvec3 Force = gravity + buoyancy + drag;
@@ -95,21 +96,26 @@ double GetTotalEnergy(RigidBody &rb, const Context &context, double h, double cu
     dmat3 R = dmat3(glm::normalize(rb.q));
     dvec3 omega = R * context.I_inv * glm::transpose(R) * rb.L;
     double kinetic_rotational = 0.5 * glm::dot(omega, rb.L);
-    double kinetic_translational = 0.5 * (1.0 / context.M_inv) * glm::dot(rb.l, rb.l);
-    double potential_gravity = (1.0 / context.M_inv) * G * rb.r.y;
+    double kinetic_translational = 0.5 * (context.M_inv) * glm::dot(rb.l, rb.l);
+    double potential_gravity = (1 / context.M_inv) * G * (rb.r.y - SIZE);
 
     double displaced_fluid;
+    double height;
     if (isSphere) {
-        double height = std::max(0.0, -rb.r.y + SIZE); // height of the submerged part of the body
-        height = std::min(SIZE * 1.0, height);
-        displaced_fluid = M_PI * height * height * (3 * SIZE - height) / 3.0; // amount of displaced fluid
+      double height = std::max(0.0, -rb.r.y + SIZE); // height of the submerged part of the body
+      height = std::min(SIZE * 2.0, height);
+      displaced_fluid = M_PI * height * height * (3 * SIZE - height) / 3.0; // amount of displaced fluid
     } else {
-        double height = std::max(0.0, -rb.r.y + SIZE);
-        displaced_fluid = pow(SIZE, 2) * std::min(height, SIZE * 1.0);
+      height = std::max(0.0, -rb.r.y + SIZE);
+      height = std::min(SIZE * 2.0, height);
+      displaced_fluid = pow(2*SIZE, 2) * height;
     }
-    double potential_buoyancy = G * FLUID_DENSITY * displaced_fluid * rb.r.y;
+    // Потенциальная энергия Архимеда (центр масс вытесненной жидкости на глубине height/2)
+    double buoyancy_center_height = -height/2.0;
+    double potential_buoyancy = -FLUID_DENSITY * displaced_fluid * G * buoyancy_center_height;
 
-    double total_energy = kinetic_rotational + kinetic_translational + potential_gravity + potential_buoyancy;
+    // Полная энергия
+    double total_energy = kinetic_translational + potential_gravity + potential_buoyancy;
     std::cout << "Total Energy: " << total_energy << std::endl;
     return total_energy;
 }
