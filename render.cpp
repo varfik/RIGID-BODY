@@ -179,7 +179,7 @@ void Idle()
         OldTime = clock();
     Time = clock();
     DeltaTime = (double)(Time - OldTime) / CLOCKS_PER_SEC;
-    DeltaTime *= 3.0;
+    DeltaTime *= 1.0;
     if (DeltaTime > 0.01) DeltaTime = 0.01; // max step
     OldTime = Time;
 
@@ -234,11 +234,21 @@ void GraphEnergy()
     RigidBody rb_rk, rb_midpoint, rb_euler, rb_heuns;
     context.M_inv = 1.0 / 6000000;
     context.I_inv = dmat3(0);
+    if (isSphere) {
+      // sphere inertia tensor
+      for (int i = 0; i < 3; i++)
+        context.I_inv[i][i] = 2.0 / (5 / context.M_inv) * SIZE * SIZE; // SIZE - radius of the sphere
+    }
+    else {
+      // cube inertia tensor
+      for (int i = 0; i < 3; i++)
+        context.I_inv[i][i] = 1.0 / (12 / context.M_inv) * 2 * SIZE * 2 * SIZE;
+    }
 
-    rb_rk.r = rb_midpoint.r = rb_euler.r = rb_heuns.r = dvec3(0, 1.5 * SIZE, -200);
+    rb_rk.r = rb_midpoint.r = rb_euler.r = rb_heuns.r = dvec3(0, 1.0 * SIZE / 2, -200);
     rb_rk.q = rb_midpoint.q = rb_euler.q = rb_heuns.q = dquat(1, 0, 0, 0);
     rb_rk.l = rb_midpoint.l = rb_euler.l = rb_heuns.l = dvec3(0, 0, 0);
-    rb_rk.L = rb_midpoint.L = rb_euler.L = rb_heuns.L = dvec3(5000, 5000, 0);
+    rb_rk.L = rb_midpoint.L = rb_euler.L = rb_heuns.L = dvec3(0, 0, 0);
 
     std::vector<double> times, rk_total_e, midpoint_total_e, euler_total_e, heuns_total_e;
     for (double t = 0; t <= GRAPHS_TIME; t += TIME_STEP) {
@@ -276,17 +286,17 @@ void Run(int argc, char *argv[])
     else {
         // cube inertia tensor
         for (int i = 0; i < 3; i++)
-            context.I_inv[i][i] = 1.0 / (12 / context.M_inv) * 2 * SIZE * SIZE;
+            context.I_inv[i][i] = 1.0 / (12 / context.M_inv) * 2 * SIZE * 2 * SIZE;
     }
 
     // r_0
-    rb.r = dvec3(0, 1.5*SIZE, -200);
+    rb.r = dvec3(0, 1.0 * SIZE / 2, -200);
     // q_0
     rb.q = dquat(1, 0, 0, 0);
     // l_0
     rb.l = dvec3(0, 0, 0);
     // L_0
-    rb.L = dvec3(5000, 5000, 0);
+    rb.L = dvec3(0, 0, 0);
 
     // initialization
     glutInit(&argc, argv);
